@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drama AI</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:system-ui,sans-serif;background:#1a1a2e;color:#fff;padding:20px;min-height:100vh}
+        .container{max-width:500px;margin:0 auto}
+        h1{text-align:center;margin-bottom:10px;background:linear-gradient(90deg,#e94560,#ff6b6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .card{background:rgba(255,255,255,.05);border-radius:16px;padding:20px;margin-bottom:15px;border:1px solid rgba(255,255,255,.1)}
+        input,select{width:100%;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.3);color:#fff;margin-bottom:15px}
+        button{width:100%;padding:15px;border-radius:10px;border:none;background:linear-gradient(90deg,#e94560,#ff6b6b);color:#fff;font-size:1rem;font-weight:600;cursor:pointer}
+        button:disabled{opacity:.5}
+        .progress{display:none;margin-top:15px}
+        .progress.active{display:block}
+        .bar{height:10px;background:rgba(255,255,255,.1);border-radius:5px;overflow:hidden}
+        .fill{height:100%;background:linear-gradient(90deg,#e94560,#ff6b6b);width:0%;transition:.5s}
+        .status{text-align:center;margin-top:10px;color:#aaa;font-size:.9rem}
+        .result{display:none;text-align:center;margin-top:20px;padding:20px;background:rgba(46,204,113,.1);border-radius:10px}
+        .result.active{display:block}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 Drama AI</h1>
+        <div class="card">
+            <input type="text" id="title" placeholder="Judul drama...">
+            <select id="duration">
+                <option value="60">1 menit</option>
+                <option value="180" selected>3 menit</option>
+                <option value="300">5 menit</option>
+            </select>
+            <button id="btn" onclick="generate()">✨ Generate</button>
+            <div class="progress" id="progress">
+                <div class="bar"><div class="fill" id="fill"></div></div>
+                <div class="status" id="status">0%</div>
+            </div>
+            <div class="result" id="result">
+                ✅ Film selesai! <a href="#" id="link" style="color:#2ecc71">Lihat hasil</a>
+            </div>
+        </div>
+    </div>
+    <script>
+        const API = window.location.origin + '/api';
+        async function generate() {
+            const title = document.getElementById('title').value;
+            if(!title) return alert('Masukkan judul!');
+            document.getElementById('btn').disabled = true;
+            document.getElementById('progress').classList.add('active');
+            document.getElementById('result').classList.remove('active');
+            
+            try {
+                const res = await fetch(API + '/generate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({title, duration: parseInt(document.getElementById('duration').value)})
+                });
+                const data = await res.json();
+                
+                let p = 0;
+                const iv = setInterval(async () => {
+                    const s = await (await fetch(API + '/status/' + data.task_id)).json();
+                    p = s.progress || Math.min(p + 20, 95);
+                    document.getElementById('fill').style.width = p + '%';
+                    document.getElementById('status').textContent = p + '% - ' + (s.message || '...');
+                    if(s.status === 'completed' || p >= 100) {
+                        clearInterval(iv);
+                        document.getElementById('result').classList.add('active');
+                        document.getElementById('btn').disabled = false;
+                    }
+                }, 1500);
+            } catch(e) {
+                alert('Error: ' + e.message);
+                document.getElementById('btn').disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
